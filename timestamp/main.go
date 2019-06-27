@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"time"
 
@@ -27,12 +26,10 @@ var (
 	inputFormats = []string{
 		time.RFC3339,
 		"2006-01-02",
+		"2006-002",
 		"2006-01-02T15:04:05",
 		"2006-01-02 15:04:05",
 	}
-
-	// regex to match ordinal dates of the form YYYY-DDD
-	reOrdinalDate = regexp.MustCompile(`^(\d{4})-(\d{3})$`)
 
 	//flags
 	utc            = flag.Bool("utc", false, "parse times without timezones as UTC")
@@ -132,14 +129,6 @@ func parseInput(s string, loc *time.Location) time.Time {
 		if t, err := time.ParseInLocation(f, s, loc); err == nil {
 			return t
 		}
-	}
-
-	if m := reOrdinalDate.FindStringSubmatch(s); m != nil {
-		year, _ := strconv.Atoi(m[1])
-		days, _ := strconv.Atoi(m[2])
-		t := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-		t = t.AddDate(0, 0, days-1)
-		return t
 	}
 
 	return time.Time{}

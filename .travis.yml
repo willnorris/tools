@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.12
+  - 1.13beta1
 
 go_import_path: willnorris.com/go/tools
 
