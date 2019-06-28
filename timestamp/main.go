@@ -10,6 +10,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -77,39 +78,12 @@ func main() {
 	}
 
 	t := parseInput(flag.Arg(0), loc)
-	epochDays := int(t.UTC().Sub(epoch) / day)
-
 	if t.IsZero() {
 		fmt.Fprintln(os.Stderr, "Unable to parse timestamp")
 		os.Exit(1)
 	}
 
-	if *printRFC3339 {
-		print(t.Format(time.RFC3339))
-		return
-	}
-
-	if *printEpochDays {
-		print(newbase60.EncodeInt(epochDays))
-		return
-	}
-
-	fmt.Printf("%s\n\n", t)
-	printTime("Unix Timestamp", "%d", t.Unix())
-
-	if t.Location() != time.UTC {
-		printTime("RFC 3339", "%s", t.Format(time.RFC3339))
-	}
-	printTime("RFC 3339 (UTC)", "%s", t.UTC().Format(time.RFC3339))
-
-	if t.Location() != time.UTC {
-		printTime("Ordinal Date", "%d-%03d", t.Year(), t.YearDay())
-	}
-	printTime("Ordinal Date (UTC)", "%d-%03d", t.UTC().Year(), t.UTC().YearDay())
-
-	if epochDays > 0 {
-		printTime("Epoch Days", "%d (%s)", epochDays, newbase60.EncodeInt(epochDays))
-	}
+	printOutput(os.Stdout, t, loc)
 }
 
 func parseInput(s string, loc *time.Location) time.Time {
@@ -134,7 +108,38 @@ func parseInput(s string, loc *time.Location) time.Time {
 	return time.Time{}
 }
 
-func printTime(name, format string, a ...interface{}) {
-	fmt.Printf("%-19s ", name+":")
-	fmt.Printf(format+"\n", a...)
+func printOutput(w io.Writer, t time.Time, loc *time.Location) {
+	epochDays := int(t.UTC().Sub(epoch) / day)
+
+	if *printRFC3339 {
+		fmt.Fprint(w, t.Format(time.RFC3339))
+		return
+	}
+
+	if *printEpochDays {
+		fmt.Fprint(w, newbase60.EncodeInt(epochDays))
+		return
+	}
+
+	fmt.Fprintf(w, "%s\n\n", t)
+	printTime(w, "Unix Timestamp", "%d", t.Unix())
+
+	if t.Location() != time.UTC {
+		printTime(w, "RFC 3339", "%s", t.Format(time.RFC3339))
+	}
+	printTime(w, "RFC 3339 (UTC)", "%s", t.UTC().Format(time.RFC3339))
+
+	if t.Location() != time.UTC {
+		printTime(w, "Ordinal Date", "%d-%03d", t.Year(), t.YearDay())
+	}
+	printTime(w, "Ordinal Date (UTC)", "%d-%03d", t.UTC().Year(), t.UTC().YearDay())
+
+	if epochDays > 0 {
+		printTime(w, "Epoch Days", "%d (%s)", epochDays, newbase60.EncodeInt(epochDays))
+	}
+}
+
+func printTime(w io.Writer, name, format string, a ...interface{}) {
+	fmt.Fprintf(w, "%-19s ", name+":")
+	fmt.Fprintf(w, format+"\n", a...)
 }

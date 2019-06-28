@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,6 +59,40 @@ func TestParseNow(t *testing.T) {
 	now := time.Now()
 	tm := parseInput("", time.UTC)
 	if tm.Before(now.Add(-time.Minute)) || tm.After(now.Add(time.Minute)) {
-		t.Errorf("parseInput('') returned time outside of now +/- day: %v", tm)
+		t.Errorf("parseInput('') returned time outside of now +/- a minute: %v", tm)
+	}
+}
+
+func TestPrintOutput(t *testing.T) {
+	ny, _ := time.LoadLocation("America/New_York")
+
+	tests := []struct {
+		time time.Time
+		loc  *time.Location
+		want []string
+	}{
+		{
+			time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
+			nil,
+			[]string{"2006-01-02 00:00:00 +0000 UTC"},
+		},
+		{
+			time.Date(2006, 1, 2, 0, 0, 0, 0, ny),
+			nil,
+			[]string{"2006-01-02 00:00:00 -0500 EST", "RFC 3339:", "RFC 3339 (UTC):"},
+		},
+	}
+
+	for _, tt := range tests {
+		b := new(bytes.Buffer)
+		printOutput(b, tt.time, tt.loc)
+		for _, w := range tt.want {
+			if !strings.Contains(b.String(), w) {
+				t.Errorf("printOutput(%v, %v) did not included expected string %q", tt.time, tt.loc, w)
+			}
+		}
+		if len(tt.want) == 0 {
+			t.Errorf("printOutput(%v, %v): %q", tt.time, tt.loc, b.String())
+		}
 	}
 }
