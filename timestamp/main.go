@@ -19,6 +19,7 @@ import (
 )
 
 const day = 24 * time.Hour
+const year = 365 * day
 
 var (
 	epoch = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -77,18 +78,17 @@ func main() {
 		loc = time.UTC
 	}
 
-	t := parseInput(flag.Arg(0), loc)
-	if t.IsZero() {
-		fmt.Fprintln(os.Stderr, "Unable to parse timestamp")
-		os.Exit(1)
+	t, err := parseInput(flag.Arg(0), loc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n\n", err)
 	}
 
 	printOutput(os.Stdout, t, loc)
 }
 
-func parseInput(s string, loc *time.Location) time.Time {
+func parseInput(s string, loc *time.Location) (t time.Time, err error) {
 	if s == "" {
-		return time.Now().In(loc)
+		return time.Now().In(loc), nil
 	}
 
 	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
@@ -96,16 +96,21 @@ func parseInput(s string, loc *time.Location) time.Time {
 		for i > 1e10 {
 			i /= 10
 		}
-		return time.Unix(i, 0).In(loc)
+		return time.Unix(i, 0).In(loc), nil
 	}
 
 	for _, f := range inputFormats {
 		if t, err := time.ParseInLocation(f, s, loc); err == nil {
-			return t
+			return t, nil
 		}
 	}
 
-	return time.Time{}
+	i := newbase60.DecodeToInt(s)
+	t = epoch.Add(time.Duration(i) * day)
+	if t.Year() < 1970 || time.Now().Add(100*year).Year() < t.Year() {
+		err = fmt.Errorf("Parsed %q as a newbase60 epoch date outside of normal bounds. This might be an error.", s)
+	}
+	return t, err
 }
 
 func printOutput(w io.Writer, t time.Time, loc *time.Location) {
